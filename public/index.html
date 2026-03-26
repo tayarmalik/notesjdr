@@ -1361,6 +1361,7 @@ function renderCampaign(container, title, actions, campaign) {
       ${campaign.user_id === state.user?.id ? '<div class="tab" id="tab-lieux" onclick="switchCampaignTab(\'lieux\')">🗺️ Lieux</div>' : ''}
       ${campaign.user_id === state.user?.id ? '<div class="tab" id="tab-timeline" onclick="switchCampaignTab(\'timeline\')">📅 Chronologie</div>' : ''}
       ${campaign.user_id === state.user?.id ? '<div class="tab" id="tab-quests" onclick="switchCampaignTab(\'quests\')">🎯 Quêtes</div>' : ''}
+      ${campaign.system === 'Savage Worlds' ? '<div class="tab" id="tab-sw" onclick="switchCampaignTab(\'sw\')">🎲 Ma Fiche SW</div>' : ''}
     </div>
 
     <div id="campaign-tab-content">
@@ -1388,6 +1389,45 @@ function switchCampaignTab(tab) {
     case 'lieux': content.innerHTML = renderLieuxTab(c); setTimeout(() => loadLieux(c.id), 0); break;
     case 'timeline': content.innerHTML = renderTimelineTab(c); setTimeout(() => loadTimeline(c.id, c.sessions||[]), 0); break;
     case 'quests': content.innerHTML = renderQuestsTab(c); setTimeout(() => loadQuests(c.id), 0); break;
+    case 'sw': content.innerHTML = '<div id="sw-tab-content"><div style="color:var(--ink3)">Chargement...</div></div>'; setTimeout(() => loadSWTab(c.id), 0); break;
+  }
+}
+
+async function loadSWTab(campaignId) {
+  const container = document.getElementById('sw-tab-content');
+  if (!container) return;
+  try {
+    const chars = await api('GET', '/sw/characters');
+    const mine = chars.filter(c => c.campaign_id == campaignId);
+    if (!mine.length) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">🎲</div><h3>Aucune fiche assignée</h3><p>Le MJ ne vous a pas encore assigné de fiche.</p></div>';
+      return;
+    }
+    container.innerHTML = mine.map(c => `
+      <div class="card" style="margin-bottom:16px;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="margin:0">${c.name}</h3>
+          <span class="badge badge-system">${c.rank}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px">
+          ${['agilite','astuce','esprit','force','vigueur'].map(stat => `
+            <div style="background:var(--surface2);border-radius:6px;padding:8px;text-align:center">
+              <div style="font-size:11px;color:var(--ink3);text-transform:uppercase">${stat}</div>
+              <div style="font-size:18px;font-weight:700;color:var(--gold)">d${c[stat]}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div style="display:flex;gap:16px;font-size:13px;color:var(--ink3);flex-wrap:wrap">
+          <span>Parade: ${c.parade||2}</span>
+          <span>Robustesse: ${c.robustesse||4}</span>
+          <span>Blessures: ${c.blessures||0}/${c.wounds_max||3}</span>
+          <span>Bennies: ${c.bennies||3}/${c.bennies_max||3}</span>
+        </div>
+        ${c.notes ? `<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:6px;font-size:13px">${c.notes}</div>` : ''}
+      </div>
+    `).join('');
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--error)">Erreur de chargement</div>';
   }
 }
 
