@@ -16,7 +16,10 @@ async function renderVTT(container, title, actions) {
   const rooms = await api("GET", "/vtt/rooms");
 
   const roomsList = rooms.map(r =>
-    "<div class=\"btn btn-ghost btn-sm\" style=\"text-align:left;cursor:pointer\" onclick=\"vttJoinRoom(" + r.id + ",'" + r.name + "')\">" + r.name + "</div>"
+    "<div style=\"display:flex;align-items:center;gap:4px\">" +
+    "<div class=\"btn btn-ghost btn-sm\" style=\"text-align:left;cursor:pointer;flex:1\" onclick=\"vttJoinRoom(" + r.id + ",'" + r.name + "')\">" + r.name + "</div>" +
+    "<button class=\"btn btn-sm btn-ghost\" style=\"color:var(--error);padding:2px 6px\" onclick=\"vttDeleteRoom(" + r.id + ")\" title=\"Supprimer\">🗑</button>" +
+    "</div>"
   ).join("");
 
   const html = [
@@ -401,6 +404,12 @@ async function vttSetRoomSystem(system) {
   const charsBtn = document.getElementById('tab-chars-btn');
   if (charsBtn) charsBtn.style.display = system ? '' : 'none';
   toast('Système mis à jour : ' + (system || 'aucun'), 'success');
+}
+
+async function vttDeleteRoom(id) {
+  if (!confirm("Supprimer cette salle ?")) return;
+  await api("DELETE", "/vtt/rooms/" + id);
+  showPage("vtt");
 }
 
 async function vttCreateRoom() {
