@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # 1. Ajouter case 'upload' dans le switch de showPage
-sed -i "s|case 'admin': renderAdmin(container, title, actions); break;|case 'admin': renderAdmin(container, title, actions); break;\n    case 'upload': renderUpload(container, title, actions); break;|" /opt/vaultlog/public/index.html
+sed -i "s|case 'admin': renderAdmin(container, title, actions); break;|case 'admin': renderAdmin(container, title, actions); break;\n    case 'upload': renderUpload(container, title, actions); break;|" /opt/jdrnotes/public/index.html
 
 # 2. Injecter la fonction renderUpload juste avant </script>
 # Trouver la dernière ligne </script> et insérer avant
 python3 << 'PYEOF'
-with open('/opt/vaultlog/public/index.html', 'r') as f:
+with open('/opt/jdrnotes/public/index.html', 'r') as f:
     content = f.read()
 
 upload_code = '''
@@ -221,7 +221,7 @@ async function deleteFile(filename) {
 last_script = content.rfind('</script>')
 content = content[:last_script] + upload_code + '\n' + content[last_script:]
 
-with open('/opt/vaultlog/public/index.html', 'w') as f:
+with open('/opt/jdrnotes/public/index.html', 'w') as f:
     f.write(content)
 
 print("Done")
