@@ -20,7 +20,7 @@ const { initDb } = require('./src/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SECRET = process.env.SESSION_SECRET || 'vaultlog-secret-change-in-prod';
+const SECRET = process.env.SESSION_SECRET || 'jdrnotes-secret-change-in-prod';
 
 // Middleware
 app.use(express.json({ limit: '50mb' }));
@@ -28,7 +28,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cors({ origin: true, credentials: true }));
 
 // Logs d'accès
-const accessLogStream = fs.createWriteStream('/var/log/vaultlog-access.log', { flags: 'a' });
+const accessLogStream = fs.createWriteStream('/var/log/jdrnotes-access.log', { flags: 'a' });
 app.use(morgan(':date[iso] :remote-addr :method :url :status :response-time ms - :res[content-length]', { stream: accessLogStream }));
 // Log connexions uniquement sur stdout
 app.use('/api/auth/login', (req, res, next) => {
