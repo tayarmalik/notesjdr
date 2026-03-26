@@ -5,9 +5,9 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const router = express.Router();
 
-const AUDIO_DIR = '/opt/vaultlog/audio';
+const AUDIO_DIR = '/opt/jdrnotes/audio';
 const PYTHON = '/home/malik/.pyenv/versions/3.11.10/bin/python3';
-const TRANSCRIBE = '/opt/vaultlog/transcribe.py';
+const TRANSCRIBE = '/opt/jdrnotes/transcribe.py';
 const transcribeJobs = {};
 
 fs.mkdirSync(AUDIO_DIR, { recursive: true });

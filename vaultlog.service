@@ -1,0 +1,24 @@
+[Unit]
+Description=VaultLog — Journal de sessions JDR
+After=network.target
+
+[Service]
+Type=simple
+User=malik
+WorkingDirectory=/opt/vaultlog
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=vaultlog
+
+# Configuration
+Environment=PORT=3000
+Environment=NODE_ENV=production
+Environment=SESSION_SECRET=CHANGE_THIS_SECRET_IN_PRODUCTION
+Environment=OLLAMA_URL=http://localhost:11434
+Environment=OLLAMA_MODEL=llama3.2
+
+[Install]
+WantedBy=multi-user.target

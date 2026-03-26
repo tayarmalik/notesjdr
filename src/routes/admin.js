@@ -36,17 +36,17 @@ router.get('/dashboard', requireAuth, requireAdmin, (req, res) => {
   // Espace disque
   let diskInfo = {};
   try {
-    const out = execSync('df /opt/vaultlog --output=size,used,avail,pcent -BM | tail -1').toString().trim();
+    const out = execSync('df /opt/jdrnotes --output=size,used,avail,pcent -BM | tail -1').toString().trim();
     const [size, used, avail, pcent] = out.split(/\s+/);
     diskInfo = { size, used, avail, pcent };
   } catch(e) {}
   // BDD
   let dbSize = 0;
-  try { dbSize = fs.statSync('/opt/vaultlog/data/volog.db').size; } catch(e) {}
+  try { dbSize = fs.statSync('/opt/jdrnotes/data/volog.db').size; } catch(e) {}
   // Sessions actives
   let activeSessions = [];
   try {
-    const sessionDb = require('better-sqlite3')('/opt/vaultlog/data/sessions.db');
+    const sessionDb = require('better-sqlite3')('/opt/jdrnotes/data/sessions.db');
     const rows = sessionDb.prepare('SELECT sess, expired FROM sessions WHERE expired > ?').all(Date.now());
     activeSessions = rows.map(r => {
       try {

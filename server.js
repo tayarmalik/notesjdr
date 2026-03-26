@@ -53,7 +53,7 @@ app.use('/api/auth/login', limiterAuth);
 
 app.use(session({
   secret: SECRET,
-  store: new SQLiteStore({ db: 'sessions.db', dir: '/opt/vaultlog/data' }),
+  store: new SQLiteStore({ db: 'sessions.db', dir: '/opt/jdrnotes/data' }),
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -163,7 +163,7 @@ app.get('/api/sessions/:id/pdf', async (req, res) => {
   let transcript = '';
   if (session.audio_file) {
     try {
-      const txtPath = require('path').join('/opt/vaultlog/audio', session.audio_file.replace(/\.[^.]+$/, '.txt'));
+      const txtPath = require('path').join('/opt/jdrnotes/audio', session.audio_file.replace(/\.[^.]+$/, '.txt'));
       if (require('fs').existsSync(txtPath)) transcript = require('fs').readFileSync(txtPath, 'utf8');
     } catch(e) {}
   }
@@ -173,7 +173,7 @@ app.get('/api/sessions/:id/pdf', async (req, res) => {
 
   const { execFileSync } = require('child_process');
   try {
-    execFileSync('python3', ['/opt/vaultlog/src/generate_pdf.py'], { input: payload, encoding: 'utf8' });
+    execFileSync('python3', ['/opt/jdrnotes/src/generate_pdf.py'], { input: payload, encoding: 'utf8' });
     res.download(outputPath, `session_${session.number}_${session.title}.pdf`, () => {
       require('fs').unlinkSync(outputPath);
     });

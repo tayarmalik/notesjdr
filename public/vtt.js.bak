@@ -1,0 +1,696 @@
+// ═══════════════════════════════════════
+// VTT — Table Virtuelle
+// ═══════════════════════════════════════
+let vttState = {
+  room: null, tokens: [], walls: [], ws: null, dragging: null,
+  offsetX: 0, offsetY: 0, scale: 1, panX: 0, panY: 0,
+  isPanning: false, lastPan: null, canvas: null, ctx: null,
+  chatMessages: [], myName: null, combatOrder: [], currentTurn: 0,
+  wallMode: false, drawingWall: null, wallColor: '#8b4513', wallThickness: 4,
+  fogEnabled: false, visionRadius: 400
+};
+
+async function renderVTT(container, title, actions) {
+  title.textContent = '🎲 Table Virtuelle';
+  container.style.padding = '0';
+  container.style.maxWidth = '100%';
+  container.style.width = '100%';
+  const rooms = await api('GET', '/vtt/rooms');
+  container.innerHTML = `
+    <div style="display:flex;flex:1;align-self:stretch;min-height:0;gap:0;overflow:hidden">
+      <!-- Sidebar gauche -->
+      <div style="width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0">
+        <div style="padding:12px;border-bottom:1px solid var(--border)">
+          <div style="font-family:Cinzel,serif;color:var(--gold);font-size:13px;margin-bottom:8px">🗺️ Salles</div>
+          <div id="vtt-rooms-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+            ${rooms.map(r => `<div class="btn btn-ghost btn-sm" style="text-align:left;cursor:pointer" onclick="vttJoinRoom(${r.id},'${r.name}')">${r.name}</div>`).join('')}
+          </div>
+          <div style="display:flex;gap:4px">
+            <input id="new-room-name" class="input-sm" placeholder="Nouvelle salle" style="flex:1">
+            <button class="btn btn-sm" style="background:var(--gold);color:var(--bg)" onclick="vttCreateRoom()">+</button>
+          </div>
+        </div>
+        <!-- Tokens -->
+        <div style="padding:12px;border-bottom:1px solid var(--border);flex:1;overflow-y:auto">
+          <div style="font-family:Cinzel,serif;color:var(--gold);font-size:13px;margin-bottom:8px">🎭 Jetons</div>
+          <div id="vtt-tokens-sidebar" style="display:flex;flex-direction:column;gap:4px"></div>
+          <button class="btn btn-sm btn-ghost" style="margin-top:8px;width:100%" onclick="vttAddTokenModal()">+ Ajouter jeton</button>
+        </div>
+        <!-- Initiative -->
+        <div style="padding:12px;border-bottom:1px solid var(--border)">
+          <div style="font-family:Cinzel,serif;color:var(--gold);font-size:13px;margin-bottom:6px">⚔️ Initiative</div>
+          <div id="vtt-initiative" style="font-size:13px;color:var(--ink3)">Aucun combat</div>
+          <div style="display:flex;gap:4px;margin-top:6px">
+            <button class="btn btn-sm btn-ghost" onclick="vttNextTurn()">▶ Suivant</button>
+            <button class="btn btn-sm btn-ghost" onclick="vttRollInit()">🎲 Init</button>
+          </div>
+        </div>
+        <!-- Upload carte -->
+        <div style="padding:12px">
+          <div style="font-family:Cinzel,serif;color:var(--gold);font-size:13px;margin-bottom:6px">🗺️ Carte</div>
+          <input type="file" id="map-upload" accept="image/*" style="display:none" onchange="vttUploadMap(this)">
+          <button class="btn btn-sm btn-ghost" style="width:100%" onclick="document.getElementById('map-upload').click()">📁 Charger carte</button>
+          <div style="display:flex;gap:4px;margin-top:6px">
+            <button class="btn btn-sm btn-ghost" onclick="vttZoom(0.1)">+</button>
+            <button class="btn btn-sm btn-ghost" onclick="vttZoom(-0.1)">−</button>
+            <button class="btn btn-sm btn-ghost" onclick="vttResetView()">⌂</button>
+          <div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px">
+            <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:4px">🧱 Murs</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <button class="btn btn-sm btn-ghost" id="wall-mode-btn" onclick="vttToggleWallMode()">✏️ Dessiner</button>
+              <button class="btn btn-sm btn-ghost" onclick="vttClearWalls()">Effacer</button>
+            </div>
+          </div>
+          <div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px">
+            <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:4px">Brouillard</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <button class="btn btn-sm btn-ghost" id="fog-btn" onclick="vttToggleFog()">Activer</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+              <label style="font-size:12px;color:rgba(255,255,255,0.5)">Vision:</label>
+              <input type="range" min="100" max="800" value="400" oninput="vttState.visionRadius=parseInt(this.value);vttDraw()" style="flex:1">
+            </div>
+          </div>
+          <div style="display:none">
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+              <label style="font-size:12px;color:rgba(255,255,255,0.5)">Couleur:</label>
+              <input type="color" value="#8b4513" onchange="vttState.wallColor=this.value" style="width:30px;height:22px;border:none;cursor:pointer">
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+      <!-- Canvas principal -->
+      <div style="flex:1;position:relative;overflow:hidden;background:#1a1a2e;height:100%">
+        <canvas id="vtt-canvas" style="position:absolute;top:0;left:0;cursor:grab"></canvas>
+        <div id="vtt-no-room" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:18px;font-family:Cinzel,serif">
+          Sélectionne ou crée une salle pour commencer
+        </div>
+      </div>
+      <!-- Panneau droit -->
+      <div style="width:260px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0">
+        <!-- Lanceur de dés -->
+        <div style="padding:12px;border-bottom:1px solid var(--border)">
+          <div style="font-family:Cinzel,serif;color:var(--gold);font-size:13px;margin-bottom:8px">🎲 Dés</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+            ${[4,6,8,10,12,20,100].map(d => '<button class="btn btn-sm btn-ghost" onclick="vttRollDice('+d+')">d'+d+'</button>').join('')}
+          </div>
+          <div style="display:flex;gap:4px">
+            <input id="dice-expr" class="input-sm" placeholder="2d6+3" style="flex:1">
+            <button class="btn btn-sm" style="background:var(--gold);color:var(--bg)" onclick="vttRollCustom()">🎲</button>
+          </div>
+          <div id="dice-result" style="margin-top:8px;font-size:20px;font-weight:700;color:var(--gold);text-align:center;min-height:30px"></div>
+        </div>
+        <!-- Chat -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-family:Cinzel,serif;color:var(--gold);font-size:13px">💬 Chat</div>
+          <div id="vtt-chat" style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:4px"></div>
+          <div style="padding:8px;border-top:1px solid var(--border);display:flex;gap:4px">
+            <input id="chat-input" class="input-sm" placeholder="Message..." style="flex:1" onkeydown="if(event.key==='Enter')vttSendChat()">
+            <button class="btn btn-sm" style="background:var(--gold);color:var(--bg)" onclick="vttSendChat()">↵</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Modal ajout jeton -->
+    <div id="vtt-token-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:340px">
+        <div style="font-family:Cinzel,serif;color:var(--gold);margin-bottom:16px">🎭 Ajouter un jeton</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <input class="input-sm" id="tok-name" placeholder="Nom du jeton">
+          <div style="display:flex;gap:8px">
+            <input class="input-sm" id="tok-hp" placeholder="PV actuels" type="number" style="flex:1">
+            <input class="input-sm" id="tok-hpmax" placeholder="PV max" type="number" style="flex:1">
+          </div>
+          <input class="input-sm" id="tok-init" placeholder="Initiative" type="number">
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="color:var(--ink2);font-size:13px">Couleur :</label>
+            <input type="color" id="tok-color" value="#4aab72" style="width:40px;height:30px;border:none;cursor:pointer">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-sm" style="flex:1;background:var(--gold);color:var(--bg);font-weight:700" onclick="vttAddToken()">Ajouter</button>
+            <button class="btn btn-sm btn-ghost" style="flex:1" onclick="vttCloseTokenModal()">Annuler</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  setTimeout(() => { vttInitCanvas(); vttConnectWS(); }, 0);
+}
+
+function vttInitCanvas() {
+  const canvas = document.getElementById('vtt-canvas');
+  if (!canvas) return;
+  vttState.canvas = canvas;
+  vttState.ctx = canvas.getContext('2d');
+  vttResizeCanvas();
+  window.addEventListener('resize', vttResizeCanvas);
+  canvas.addEventListener('mousedown', vttOnMouseDown);
+  canvas.addEventListener('mousemove', vttOnMouseMove);
+  canvas.addEventListener('mouseup', vttOnMouseUp);
+  canvas.addEventListener('wheel', vttOnWheel, { passive: false });
+  canvas.addEventListener('dblclick', vttOnDblClick);
+  vttDraw();
+}
+
+function vttResizeCanvas() {
+  const canvas = vttState.canvas;
+  if (!canvas) return;
+  const parent = canvas.parentElement;
+  canvas.width = parent.clientWidth;
+  canvas.height = parent.clientHeight;
+  vttDraw();
+}
+
+function vttDraw() {
+  const { canvas, ctx, tokens, scale, panX, panY } = vttState;
+  if (!canvas || !ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(panX, panY);
+  ctx.scale(scale, scale);
+  // Dessiner la carte
+  if (vttState.mapImg) {
+    ctx.drawImage(vttState.mapImg, 0, 0);
+  } else {
+    // Grille par défaut
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    const gs = vttState.room?.grid_size || 50;
+    const w = canvas.width / scale, h = canvas.height / scale;
+    for (let x = 0; x < w + gs; x += gs) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h + gs); ctx.stroke(); }
+    for (let y = 0; y < h + gs; y += gs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w + gs, y); ctx.stroke(); }
+  }
+  // Dessiner les murs
+  vttState.walls.forEach(w => {
+    ctx.beginPath();
+    ctx.moveTo(w.x1, w.y1);
+    ctx.lineTo(w.x2, w.y2);
+    ctx.strokeStyle = w.color || '#8b4513';
+    ctx.lineWidth = w.thickness || 4;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  });
+  // Mur en cours de dessin
+  if (vttState.drawingWall) {
+    const dw = vttState.drawingWall;
+    ctx.beginPath();
+    ctx.moveTo(dw.x1, dw.y1);
+    ctx.lineTo(dw.x2, dw.y2);
+    ctx.strokeStyle = vttState.wallColor;
+    ctx.lineWidth = vttState.wallThickness;
+    ctx.lineCap = 'round';
+    ctx.setLineDash([5, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // Dessiner les jetons
+  tokens.forEach(tok => {
+    if (!tok.is_visible) return;
+    const size = tok.width || 50;
+    const x = tok.x, y = tok.y;
+    // Cercle jeton
+    ctx.beginPath();
+    ctx.arc(x + size/2, y + size/2, size/2 - 2, 0, Math.PI * 2);
+    ctx.fillStyle = tok.color || '#4aab72';
+    ctx.fill();
+    ctx.strokeStyle = tok === vttState.selected ? '#fff' : 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = tok === vttState.selected ? 3 : 1;
+    ctx.stroke();
+    // Nom
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.max(10, size/4)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(tok.name.slice(0, 8), x + size/2, y + size/2 + size/8);
+    // Barre de vie
+    if (tok.hp !== null && tok.hp_max) {
+      const pct = Math.max(0, tok.hp / tok.hp_max);
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(x, y + size + 2, size, 6);
+      ctx.fillStyle = pct > 0.5 ? '#4aab72' : pct > 0.25 ? '#f59e0b' : '#ef4444';
+      ctx.fillRect(x, y + size + 2, size * pct, 6);
+    }
+  });
+  // Brouillard de guerre
+  vttDrawFog();
+  ctx.restore();
+}
+
+function vttOnMouseDown(e) {
+  const { canvas, tokens, scale, panX, panY } = vttState;
+  const rect = canvas.getBoundingClientRect();
+  const wx = (e.clientX - rect.left - panX) / scale;
+  const wy = (e.clientY - rect.top - panY) / scale;
+  // Chercher un jeton
+  const tok = tokens.find(t => wx >= t.x && wx <= t.x + t.width && wy >= t.y && wy <= t.y + t.width);
+  if (vttState.wallMode) {
+    if (vttState.drawingWall) {
+      // Deuxième clic = finaliser le mur
+      vttState.drawingWall.x2 = wx;
+      vttState.drawingWall.y2 = wy;
+      const w = vttState.drawingWall;
+      const dx = w.x2 - w.x1, dy = w.y2 - w.y1;
+      if (Math.sqrt(dx*dx + dy*dy) > 10) {
+        const wall = { ...w, color: vttState.wallColor, thickness: vttState.wallThickness };
+        api('POST', '/vtt/rooms/' + vttState.room.id + '/walls', wall).then(d => {
+          wall.id = d.id;
+          vttState.walls.push(wall);
+          vttBroadcast({ type: 'wall_add', wall });
+          vttDraw();
+        });
+      }
+      vttState.drawingWall = null;
+    } else {
+      // Premier clic = commencer le mur
+      vttState.drawingWall = { x1: wx, y1: wy, x2: wx, y2: wy };
+    }
+  } else if (tok) {
+    vttState.dragging = tok;
+    vttState.selected = tok;
+    vttState.offsetX = wx - tok.x;
+    vttState.offsetY = wy - tok.y;
+    canvas.style.cursor = 'grabbing';
+  } else {
+    vttState.selected = null;
+    vttState.isPanning = true;
+    vttState.lastPan = { x: e.clientX, y: e.clientY };
+    canvas.style.cursor = 'grabbing';
+  }
+  vttDraw();
+}
+
+function vttOnMouseMove(e) {
+  const { canvas, scale, panX, panY } = vttState;
+  const rect = canvas.getBoundingClientRect();
+  const wx = (e.clientX - rect.left - panX) / scale;
+  const wy = (e.clientY - rect.top - panY) / scale;
+  if (vttState.wallMode && vttState.drawingWall) {
+    vttState.drawingWall.x2 = wx;
+    vttState.drawingWall.y2 = wy;
+    vttDraw();
+  } else if (vttState.dragging) {
+    const gs = vttState.room?.grid_size || 50;
+    vttState.dragging.x = Math.round((wx - vttState.offsetX) / gs) * gs;
+    vttState.dragging.y = Math.round((wy - vttState.offsetY) / gs) * gs;
+    vttDraw();
+  } else if (vttState.isPanning && vttState.lastPan) {
+    vttState.panX += e.clientX - vttState.lastPan.x;
+    vttState.panY += e.clientY - vttState.lastPan.y;
+    vttState.lastPan = { x: e.clientX, y: e.clientY };
+    vttDraw();
+  }
+}
+
+function vttOnMouseUp() {
+  if (vttState.wallMode && vttState.drawingWall) {
+    vttState.drawingWall.x2 = wx;
+    vttState.drawingWall.y2 = wy;
+    vttDraw();
+  } else if (vttState.dragging) {
+    const tok = vttState.dragging;
+    api('PUT', '/vtt/tokens/' + tok.id, { x: tok.x, y: tok.y }).catch(() => {});
+    vttBroadcast({ type: 'token_move', token_id: tok.id, x: tok.x, y: tok.y });
+  }
+  vttState.dragging = null;
+  vttState.isPanning = false;
+  vttState.lastPan = null;
+  if (vttState.canvas) vttState.canvas.style.cursor = 'grab';
+}
+
+function vttOnWheel(e) {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.1 : 0.1;
+  vttZoom(delta, e.clientX, e.clientY);
+}
+
+function vttOnDblClick(e) {
+  const { canvas, tokens, scale, panX, panY } = vttState;
+  const rect = canvas.getBoundingClientRect();
+  const wx = (e.clientX - rect.left - panX) / scale;
+  const wy = (e.clientY - rect.top - panY) / scale;
+  const tok = tokens.find(t => wx >= t.x && wx <= t.x + t.width && wy >= t.y && wy <= t.y + t.width);
+  if (tok) vttEditToken(tok);
+}
+
+function vttZoom(delta, cx, cy) {
+  const canvas = vttState.canvas;
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  cx = cx ?? rect.width / 2; cy = cy ?? rect.height / 2;
+  const newScale = Math.max(0.2, Math.min(4, vttState.scale + delta));
+  vttState.panX = cx - (cx - vttState.panX) * (newScale / vttState.scale);
+  vttState.panY = cy - (cy - vttState.panY) * (newScale / vttState.scale);
+  vttState.scale = newScale;
+  vttDraw();
+}
+
+function vttResetView() { vttState.scale = 1; vttState.panX = 0; vttState.panY = 0; vttDraw(); }
+
+async function vttJoinRoom(id, name) {
+  vttState.room = { id, name, grid_size: 50 };
+  vttState.tokens = await api('GET', '/vtt/rooms/' + id + '/tokens');
+  vttState.walls = await api('GET', '/vtt/rooms/' + id + '/walls');
+  // Charger la carte si elle existe
+  const rooms = await api('GET', '/vtt/rooms');
+  const room = rooms.find(r => r.id === id);
+  if (room) vttState.room = room;
+  if (room?.map_url) {
+    const img = new Image();
+    img.onload = () => { vttState.mapImg = img; vttDraw(); };
+    img.src = room.map_url;
+  } else {
+    vttState.mapImg = null;
+  }
+  document.getElementById('vtt-no-room').style.display = 'none';
+  vttUpdateSidebar();
+  vttUpdateInitiative();
+  vttDraw();
+  vttBroadcast({ type: 'join', room_id: id, user_id: state.user?.id, username: state.user?.username });
+}
+
+async function vttCreateRoom() {
+  const name = document.getElementById('new-room-name').value.trim();
+  if (!name) return;
+  const data = await api('POST', '/vtt/rooms', { name });
+  document.getElementById('new-room-name').value = '';
+  const btn = document.createElement('div');
+  btn.className = 'btn btn-ghost btn-sm';
+  btn.style.cssText = 'text-align:left;cursor:pointer';
+  btn.textContent = name;
+  btn.onclick = () => vttJoinRoom(data.id, name);
+  document.getElementById('vtt-rooms-list').appendChild(btn);
+  vttJoinRoom(data.id, name);
+}
+
+function vttAddTokenModal() {
+  if (!vttState.room) { toast('Rejoins une salle d\'abord', 'error'); return; }
+  document.getElementById('vtt-token-modal').style.display = 'flex';
+}
+
+async function vttAddToken() {
+  const name = document.getElementById('tok-name').value.trim();
+  const hp = parseInt(document.getElementById('tok-hp').value) || null;
+  const hp_max = parseInt(document.getElementById('tok-hpmax').value) || null;
+  const initiative = parseInt(document.getElementById('tok-init').value) || 0;
+  const color = document.getElementById('tok-color').value;
+  if (!name) return;
+  const gs = vttState.room.grid_size || 50;
+  const data = await api('POST', '/vtt/rooms/' + vttState.room.id + '/tokens', { name, x: gs, y: gs, color, hp, hp_max, initiative, width: gs, height: gs });
+  const tok = { id: data.id, name, x: gs, y: gs, color, hp, hp_max, initiative, width: gs, height: gs, is_visible: 1 };
+  vttState.tokens.push(tok);
+  document.getElementById('vtt-token-modal').style.display = 'none';
+  vttUpdateSidebar();
+  vttUpdateInitiative();
+  vttDraw();
+  vttBroadcast({ type: 'token_add', token: tok });
+}
+
+function vttEditToken(tok) {
+  const newHp = prompt('PV de ' + tok.name + ' (' + (tok.hp_max || '?') + ' max):', tok.hp || 0);
+  if (newHp === null) return;
+  tok.hp = parseInt(newHp) || 0;
+  api('PUT', '/vtt/tokens/' + tok.id, { hp: tok.hp }).catch(() => {});
+  vttBroadcast({ type: 'token_hp', token_id: tok.id, hp: tok.hp });
+  vttUpdateSidebar();
+  vttDraw();
+}
+
+function vttUpdateSidebar() {
+  const el = document.getElementById('vtt-tokens-sidebar');
+  if (!el) return;
+  el.innerHTML = vttState.tokens.map(t => `
+    <div style="display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--bg);border-radius:4px">
+      <div style="width:12px;height:12px;border-radius:50%;background:${t.color};flex-shrink:0"></div>
+      <div style="flex:1;font-size:13px;color:var(--ink)">${t.name}</div>
+      ${t.hp !== null ? `<div style="font-size:12px;color:${t.hp/t.hp_max > 0.5 ? 'var(--green)' : 'var(--red)'}">${t.hp}/${t.hp_max}</div>` : ''}
+      <button onclick="vttDeleteToken(${t.id})" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:12px">🗑️</button>
+    </div>`).join('');
+}
+
+function vttUpdateInitiative() {
+  const sorted = [...vttState.tokens].filter(t => t.initiative).sort((a, b) => b.initiative - a.initiative);
+  vttState.combatOrder = sorted;
+  const el = document.getElementById('vtt-initiative');
+  if (!el) return;
+  if (!sorted.length) { el.innerHTML = 'Aucun combat'; return; }
+  el.innerHTML = sorted.map((t, i) => `<div style="padding:2px 0;color:${i === vttState.currentTurn ? 'var(--gold)' : 'var(--ink3)'};font-size:13px">${i === vttState.currentTurn ? '▶ ' : ''}${t.name} (${t.initiative})</div>`).join('');
+}
+
+function vttNextTurn() {
+  if (!vttState.combatOrder.length) return;
+  vttState.currentTurn = (vttState.currentTurn + 1) % vttState.combatOrder.length;
+  vttUpdateInitiative();
+  vttBroadcast({ type: 'next_turn', turn: vttState.currentTurn });
+  const current = vttState.combatOrder[vttState.currentTurn];
+  vttChatMsg('système', `⚔️ Tour de ${current.name}`);
+}
+
+function vttRollInit() {
+  vttState.tokens.forEach(tok => {
+    const roll = Math.floor(Math.random() * 20) + 1;
+    tok.initiative = roll;
+    api('PUT', '/vtt/tokens/' + tok.id, { initiative: roll }).catch(() => {});
+  });
+  vttState.currentTurn = 0;
+  vttUpdateInitiative();
+  vttChatMsg('système', '🎲 Initiatives lancées !');
+}
+
+async function vttDeleteToken(id) {
+  await api('DELETE', '/vtt/tokens/' + id);
+  vttState.tokens = vttState.tokens.filter(t => t.id !== id);
+  vttUpdateSidebar();
+  vttUpdateInitiative();
+  vttDraw();
+  vttBroadcast({ type: 'token_delete', token_id: id });
+}
+
+function vttRollDice(sides) {
+  const result = Math.floor(Math.random() * sides) + 1;
+  document.getElementById('dice-result').textContent = `d${sides}: ${result}`;
+  vttChatMsg(state.user?.username || 'Anonyme', `🎲 d${sides} → **${result}**`);
+  vttBroadcast({ type: 'dice_roll', sides, result, username: state.user?.username });
+}
+
+function vttRollCustom() {
+  const expr = document.getElementById('dice-expr').value.trim();
+  if (!expr) return;
+  try {
+    const m = expr.match(/^(\d+)d(\d+)([+-]\d+)?$/i);
+    if (!m) { toast('Format invalide (ex: 2d6+3)', 'error'); return; }
+    const count = parseInt(m[1]), sides = parseInt(m[2]), mod = parseInt(m[3] || 0);
+    let total = mod, rolls = [];
+    for (let i = 0; i < count; i++) { const r = Math.floor(Math.random() * sides) + 1; rolls.push(r); total += r; }
+    const detail = rolls.join('+') + (mod ? (mod > 0 ? '+' : '') + mod : '');
+    document.getElementById('dice-result').textContent = `${expr}: ${total}`;
+    vttChatMsg(state.user?.username || 'Anonyme', `🎲 ${expr} → **${total}** (${detail})`);
+    vttBroadcast({ type: 'dice_roll', expr, result: total, detail, username: state.user?.username });
+  } catch(e) { toast('Erreur de calcul', 'error'); }
+}
+
+async function vttUploadMap(input) {
+  if (!vttState.room || !input.files[0]) return;
+  const formData = new FormData();
+  formData.append('map', input.files[0]);
+  const r = await fetch('/api/vtt/rooms/' + vttState.room.id + '/map', { method: 'POST', body: formData, credentials: 'include' });
+  const data = await r.json();
+  const img = new Image();
+  img.onload = () => { vttState.mapImg = img; vttDraw(); };
+  img.src = data.map_url;
+  vttBroadcast({ type: 'map_change', map_url: data.map_url });
+  toast('Carte chargée !', 'success');
+}
+
+function vttSendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  vttChatMsg(state.user?.username || 'Anonyme', msg);
+  vttBroadcast({ type: 'chat', message: msg, username: state.user?.username });
+}
+
+function vttChatMsg(username, message) {
+  const chat = document.getElementById('vtt-chat');
+  if (!chat) return;
+  const isSystem = username === 'système';
+  const div = document.createElement('div');
+  div.style.cssText = `font-size:13px;padding:3px 0;${isSystem ? 'color:var(--gold);font-style:italic' : ''}`;
+  div.innerHTML = isSystem ? message : `<span style="color:var(--gold);font-weight:600">${username}</span>: ${message}`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function vttConnectWS() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  vttState.ws = new WebSocket(proto + '//' + location.host);
+  vttState.ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'token_move') {
+      const tok = vttState.tokens.find(t => t.id === msg.token_id);
+      if (tok) { tok.x = msg.x; tok.y = msg.y; vttDraw(); }
+    } else if (msg.type === 'token_add') {
+      vttState.tokens.push(msg.token); vttUpdateSidebar(); vttUpdateInitiative(); vttDraw();
+    } else if (msg.type === 'token_delete') {
+      vttState.tokens = vttState.tokens.filter(t => t.id !== msg.token_id); vttUpdateSidebar(); vttDraw();
+    } else if (msg.type === 'token_hp') {
+      const tok = vttState.tokens.find(t => t.id === msg.token_id);
+      if (tok) { tok.hp = msg.hp; vttUpdateSidebar(); vttDraw(); }
+    } else if (msg.type === 'chat' || msg.type === 'dice_roll') {
+      const text = msg.type === 'dice_roll' ? (msg.expr || 'd' + msg.sides) + ' → **' + msg.result + '**' : msg.message;
+      vttChatMsg(msg.username || 'Anonyme', text);
+    } else if (msg.type === 'next_turn') {
+      vttState.currentTurn = msg.turn; vttUpdateInitiative();
+    } else if (msg.type === 'map_change') {
+      const img = new Image(); img.onload = () => { vttState.mapImg = img; vttDraw(); }; img.src = msg.map_url;
+    } else if (msg.type === 'fog_toggle') {
+      vttState.fogEnabled = msg.enabled; vttDraw();
+    } else if (msg.type === 'wall_add') {
+      vttState.walls.push(msg.wall); vttDraw();
+    } else if (msg.type === 'walls_clear') {
+      vttState.walls = []; vttDraw();
+    } else if (msg.type === 'user_joined') {
+      vttChatMsg('système', msg.username + ' a rejoint la salle');
+    } else if (msg.type === 'user_left') {
+      vttChatMsg('système', msg.username + ' a quitté la salle');
+    }
+  };
+  vttState.ws.onopen = () => {
+    if (vttState.room) vttState.ws.send(JSON.stringify({ type: 'join', room_id: vttState.room.id, user_id: state.user?.id, username: state.user?.username }));
+  };
+  vttState.ws.onclose = () => setTimeout(vttConnectWS, 3000);
+}
+
+function vttToggleFog() {
+  vttState.fogEnabled = !vttState.fogEnabled;
+  const btn = document.getElementById('fog-btn');
+  if (btn) {
+    btn.style.background = vttState.fogEnabled ? 'var(--gold)' : '';
+    btn.style.color = vttState.fogEnabled ? 'var(--bg)' : '';
+    btn.textContent = vttState.fogEnabled ? 'Desactiver' : 'Activer';
+  }
+  vttDraw();
+  vttBroadcast({ type: 'fog_toggle', enabled: vttState.fogEnabled });
+}
+
+function vttToggleWallMode() {
+  vttState.wallMode = !vttState.wallMode;
+  const btn = document.getElementById('wall-mode-btn');
+  if (btn) { btn.style.background = vttState.wallMode ? 'var(--gold)' : ''; btn.style.color = vttState.wallMode ? 'var(--bg)' : ''; }
+  if (vttState.canvas) vttState.canvas.style.cursor = vttState.wallMode ? 'crosshair' : 'grab';
+}
+
+async function vttClearWalls() {
+  if (!vttState.room) return;
+  if (!confirm('Effacer tous les murs ?')) return;
+  await api('DELETE', '/vtt/rooms/' + vttState.room.id + '/walls');
+  vttState.walls = [];
+  vttBroadcast({ type: 'walls_clear' });
+  vttDraw();
+}
+
+function vttBroadcast(msg) {
+  if (!vttState.ws) return;
+  if (vttState.ws.readyState === 1) {
+    vttState.ws.send(JSON.stringify(msg));
+  } else if (vttState.ws.readyState === 0) {
+    vttState.ws.addEventListener('open', () => vttState.ws.send(JSON.stringify(msg)), { once: true });
+  }
+}
+
+// ═══════════════════════════════════════
+// BROUILLARD DE GUERRE — Ray Casting
+// ═══════════════════════════════════════
+
+function vttSegmentIntersect(ax, ay, bx, by, cx, cy, dx, dy) {
+  const a1 = by - ay, b1 = ax - bx, c1 = a1*ax + b1*ay;
+  const a2 = dy - cy, b2 = cx - dx, c2 = a2*cx + b2*cy;
+  const det = a1*b2 - a2*b1;
+  if (Math.abs(det) < 1e-10) return null;
+  const x = (b2*c1 - b1*c2) / det;
+  const y = (a1*c2 - a2*c1) / det;
+  const t = ((x-ax)*(bx-ax) + (y-ay)*(by-ay)) / ((bx-ax)**2 + (by-ay)**2);
+  const u = ((x-cx)*(dx-cx) + (y-cy)*(dy-cy)) / ((dx-cx)**2 + (dy-cy)**2);
+  if (t >= 0 && t <= 1 && u >= 0 && u <= 1) return { x, y, t };
+  return null;
+}
+
+function vttCastRay(ox, oy, angle, walls, maxDist) {
+  const dx = Math.cos(angle), dy = Math.sin(angle);
+  let minT = maxDist;
+  let hit = { x: ox + dx * maxDist, y: oy + dy * maxDist };
+  for (const w of walls) {
+    const res = vttSegmentIntersect(ox, oy, ox + dx * maxDist, oy + dy * maxDist, w.x1, w.y1, w.x2, w.y2);
+    if (res && res.t < minT) { minT = res.t; hit = res; }
+  }
+  return hit;
+}
+
+function vttComputeVisibility(ox, oy, walls, maxDist = 600) {
+  const angles = [];
+  // Angles vers les extrémités des murs
+  for (const w of walls) {
+    for (const [px, py] of [[w.x1, w.y1], [w.x2, w.y2]]) {
+      const a = Math.atan2(py - oy, px - ox);
+      angles.push(a - 0.001, a, a + 0.001);
+    }
+  }
+  // Angles de base (360°)
+  for (let i = 0; i < 36; i++) angles.push((i / 36) * Math.PI * 2);
+  angles.sort((a, b) => a - b);
+  const points = angles.map(a => vttCastRay(ox, oy, a, walls, maxDist));
+  return points;
+}
+
+function vttDrawFog() {
+  const { canvas, ctx, tokens, walls, scale, panX, panY } = vttState;
+  if (!canvas || !ctx) return;
+  if (!vttState.fogEnabled) return;
+
+  ctx.save();
+  ctx.translate(panX, panY);
+  ctx.scale(scale, scale);
+
+  const w = canvas.width / scale, h = canvas.height / scale;
+
+  // Créer un canvas offscreen pour le fog
+  const fogCanvas = document.createElement('canvas');
+  fogCanvas.width = canvas.width / scale;
+  fogCanvas.height = canvas.height / scale;
+  const fogCtx = fogCanvas.getContext('2d');
+
+  // Remplir de noir (brouillard total)
+  fogCtx.fillStyle = 'rgba(0,0,0,0.85)';
+  fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+
+  // Pour chaque jeton joueur visible, calculer la zone de vision
+  const isGM = state.user?.is_admin;
+  if (!isGM) {
+    const playerTokens = tokens.filter(t => t.is_visible && t.name === state.user?.username);
+    for (const tok of playerTokens) {
+      const cx = tok.x + (tok.width || 50) / 2;
+      const cy = tok.y + (tok.width || 50) / 2;
+      const pts = vttComputeVisibility(cx, cy, walls, vttState.visionRadius || 400);
+      if (!pts.length) continue;
+      fogCtx.save();
+      fogCtx.globalCompositeOperation = 'destination-out';
+      fogCtx.beginPath();
+      fogCtx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) fogCtx.lineTo(pts[i].x, pts[i].y);
+      fogCtx.closePath();
+      fogCtx.fill();
+      fogCtx.restore();
+    }
+  }
+
+  // Dessiner le fog sur le canvas principal
+  if (!isGM) ctx.drawImage(fogCanvas, 0, 0);
+
+  ctx.restore();
+}
+
+
+function vttCloseTokenModal() {
+  document.getElementById('vtt-token-modal').style.display = 'none';
+}
