@@ -1378,7 +1378,7 @@ function renderCampaign(container, title, actions, campaign) {
       ${campaign.system === 'Cyberpunk Red' ? '<div class="tab" id="tab-cpr" onclick="switchCampaignTab(\'cpr\')">🔴 Ma Fiche CPR</div>' : ''}
     </div>
 
-    <div id="campaign-tab-content">
+    <div id="campaign-tab-content" style="overflow-y:auto;flex:1;min-height:0">
       ${renderSessionsTab(campaign)}
     </div>
   `;
