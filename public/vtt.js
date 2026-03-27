@@ -11,8 +11,13 @@ let vttState = {
 };
 
 async function renderVTT(container, title, actions) {
-  title.textContent = "Table Virtuelle";
-  document.getElementById("page-container").classList.add("vtt-mode");
+  const inCampaignTab = container.id === 'vtt-campaign-container';
+    if (title) title.textContent = "Table Virtuelle";
+    document.getElementById("page-container").classList.add("vtt-mode");
+  } else {
+    container.style.height = 'calc(100vh - 140px)';
+    container.style.overflow = 'hidden';
+  }
   const rooms = await api("GET", "/vtt/rooms");
 
   const roomsList = rooms.map(r =>

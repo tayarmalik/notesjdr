@@ -1382,6 +1382,7 @@ function switchCampaignTab(tab) {
   const c = state.currentCampaign;
   const content = document.getElementById('campaign-tab-content');
   content.style.padding = '';
+  document.getElementById('page-container').classList.remove('vtt-mode');
   switch(tab) {
     case 'sessions': content.innerHTML = renderSessionsTab(c); break;
     case 'characters': content.innerHTML = renderCharactersTab(c); break;
