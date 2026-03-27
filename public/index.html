@@ -975,7 +975,7 @@
       </div>
       <div class="nav-item" onclick="showPage('upload')" id="nav-upload"><span class="icon">🎙️</span> Importer audio</div>
       <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none">⚙️ Admin</div>
-      <div class="nav-item" onclick="showPage('vtt')" id="nav-vtt">🎲 Table Virtuelle</div>
+
       <div class="nav-item" onclick="showPage('messages')" id="nav-messages"><span class="icon">📬</span> Messages <span id="msg-badge" style="display:none;background:var(--red);color:white;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px">0</span></div>
       <div class="nav-item" onclick="showPage('settings')" id="nav-settings" style="margin-top:auto">
         <span class="icon">⚙️</span> Paramètres & API
@@ -1362,6 +1362,7 @@ function renderCampaign(container, title, actions, campaign) {
       ${campaign.user_id === state.user?.id ? '<div class="tab" id="tab-timeline" onclick="switchCampaignTab(\'timeline\')">📅 Chronologie</div>' : ''}
       ${campaign.user_id === state.user?.id ? '<div class="tab" id="tab-quests" onclick="switchCampaignTab(\'quests\')">🎯 Quêtes</div>' : ''}
       ${campaign.system === 'Savage Worlds' ? '<div class="tab" id="tab-sw" onclick="switchCampaignTab(\'sw\')">🎲 Ma Fiche SW</div>' : ''}
+      <div class="tab" id="tab-vtt" onclick="switchCampaignTab('vtt')">🎲 Table Virtuelle</div>
     </div>
 
     <div id="campaign-tab-content">
@@ -1390,6 +1391,7 @@ function switchCampaignTab(tab) {
     case 'timeline': content.innerHTML = renderTimelineTab(c); setTimeout(() => loadTimeline(c.id, c.sessions||[]), 0); break;
     case 'quests': content.innerHTML = renderQuestsTab(c); setTimeout(() => loadQuests(c.id), 0); break;
     case 'sw': content.innerHTML = '<div id="sw-tab-content"><div style="color:var(--ink3)">Chargement...</div></div>'; setTimeout(() => loadSWTab(c.id), 0); break;
+    case 'vtt': content.innerHTML = ''; document.getElementById('campaign-tab-content').style.padding='0'; renderVTT(document.getElementById('campaign-tab-content'), '', []); break;
   }
 }
 
