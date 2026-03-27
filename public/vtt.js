@@ -996,8 +996,8 @@ async function swRenderCharTab() {
     } catch(e) {}
   }
 
-  const isCPR = vttState.room?.system === 'cyberpunk_red';
-  const isSW = vttState.room?.system === 'savage_worlds';
+  const roomSystem = vttState.room?.system || (state.currentCampaign?.system === 'Cyberpunk Red' ? 'cyberpunk_red' : state.currentCampaign?.system === 'Savage Worlds' ? 'savage_worlds' : ''); const isCPR = roomSystem === 'cyberpunk_red';
+  const isSW = roomSystem === 'savage_worlds';
   const systemLabel = isCPR ? 'Cyberpunk Red' : isSW ? 'Savage Worlds' : 'Personnages';
 
   if (isCPR) {
@@ -1037,14 +1037,14 @@ async function cprLoadVTTChars() {
   el.innerHTML = mine.map(c => {
     const stats = ['int','ref','dex','tech','cool','will','luck','move','body','emp'];
     const statsHtml = stats.map(s =>
-      '<div style="text-align:center;background:var(--bg);border-radius:4px;padding:6px;cursor:pointer" onclick="cprRollStat('' + s.toUpperCase() + '',' + (c[s]||5) + ')" title="Lancer ' + s.toUpperCase() + '">' +
+      '<div style="text-align:center;background:var(--bg);border-radius:4px;padding:6px;cursor:pointer" onclick="cprRollStat(\'' + s.toUpperCase() + '\',' + (c[s]||5) + ')" title="Lancer ' + s.toUpperCase() + '">' +
         '<div style="font-size:9px;color:var(--ink3)">' + s.toUpperCase() + '</div>' +
         '<div style="font-size:16px;font-weight:700;color:var(--gold)">' + (c[s]||5) + '</div>' +
         '<div style="font-size:9px;color:var(--ink3)">🎲</div>' +
       '</div>'
     ).join('');
     const skillsHtml = c.skills?.length ? c.skills.map(sk =>
-      '<button class="btn btn-sm btn-ghost" style="font-size:11px" onclick="cprRollSkill('' + sk.name + '',' + (sk.value||0) + ',' + (c[sk.stat]||5) + ')" title="Lancer ' + sk.name + '">' +
+      '<button class="btn btn-sm btn-ghost" style="font-size:11px" onclick="cprRollSkill(\'' + sk.name + '\',' + (sk.value||0) + ',' + (c[sk.stat]||5) + ')" title="Lancer ' + sk.name + '">' +
         '🎲 ' + sk.name + ' (' + (sk.value||0) + ')' +
       '</button>'
     ).join('') : '<div style="color:var(--ink3);font-size:11px">Aucune compétence</div>';
