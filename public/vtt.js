@@ -381,6 +381,11 @@ async function vttJoinRoom(id, name) {
     const hasSystem = room && room.system && room.system !== '';
     charsBtn.style.display = hasSystem ? '' : 'none';
   }
+  // Afficher/cacher onglet SW selon système
+  const swBtn = document.getElementById('tab-sw-btn');
+  if (swBtn) {
+    swBtn.style.display = (room && room.system === 'savage_worlds') ? '' : 'none';
+  }
   // Afficher le système actif
   vttShowRoomSystem(room);
   vttBroadcast({ type: 'join', room_id: id, user_id: state.user?.id, username: state.user?.username });
