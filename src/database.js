@@ -169,6 +169,7 @@ async function initDb() {
 
   // Migrations
   const migrations = [
+    "ALTER TABLE cpr_characters ADD COLUMN role TEXT DEFAULT 'Solo'",
     "ALTER TABLE vtt_rooms ADD COLUMN system TEXT",
     "ALTER TABLE sw_characters ADD COLUMN assigned_user_id INTEGER",
     "ALTER TABLE sw_characters ADD COLUMN system TEXT DEFAULT 'Savage Worlds'",

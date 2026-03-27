@@ -1363,6 +1363,7 @@ function renderCampaign(container, title, actions, campaign) {
       ${campaign.user_id === state.user?.id ? '<div class="tab" id="tab-quests" onclick="switchCampaignTab(\'quests\')">🎯 Quêtes</div>' : ''}
       ${campaign.system === 'Savage Worlds' ? '<div class="tab" id="tab-sw" onclick="switchCampaignTab(\'sw\')">🎲 Ma Fiche SW</div>' : ''}
       <div class="tab" id="tab-vtt" onclick="switchCampaignTab('vtt')">🎲 Table Virtuelle</div>
+      ${campaign.system === 'Cyberpunk Red' ? '<div class="tab" id="tab-cpr" onclick="switchCampaignTab(\'cpr\')">🔴 Ma Fiche CPR</div>' : ''}
     </div>
 
     <div id="campaign-tab-content">
@@ -1392,6 +1393,69 @@ function switchCampaignTab(tab) {
     case 'quests': content.innerHTML = renderQuestsTab(c); setTimeout(() => loadQuests(c.id), 0); break;
     case 'sw': content.innerHTML = '<div id="sw-tab-content"><div style="color:var(--ink3)">Chargement...</div></div>'; setTimeout(() => loadSWTab(c.id), 0); break;
     case 'vtt': content.innerHTML = ''; document.getElementById('campaign-tab-content').style.padding='0'; renderVTT(document.getElementById('campaign-tab-content'), '', []); break;
+    case 'cpr': content.innerHTML = '<div id="cpr-tab-content"><div style="color:var(--ink3)">Chargement...</div></div>'; setTimeout(() => loadCPRTab(c.id), 0); break;
+  }
+}
+
+async function loadCPRTab(campaignId) {
+  const container = document.getElementById('cpr-tab-content');
+  if (!container) return;
+  try {
+    const chars = await api('GET', '/cpr/characters');
+    const mine = chars.filter(c => c.campaign_id == campaignId);
+    if (!mine.length) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔴</div><h3>Aucune fiche assignée</h3><p>Le MJ ne vous a pas encore assigné de fiche Cyberpunk Red.</p></div>';
+      return;
+    }
+    container.innerHTML = mine.map(c => `
+      <div class="card" style="margin-bottom:16px;padding:20px;max-width:800px;margin-left:auto;margin-right:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div>
+            <h3 style="margin:0;color:var(--gold)">${c.name}</h3>
+            <div style="font-size:13px;color:var(--ink3);margin-top:2px">${c.role}</div>
+          </div>
+          <div style="display:flex;gap:12px;font-size:13px">
+            <span style="color:var(--error)">❤️ ${c.hp}/${c.hp_max}</span>
+            <span style="color:var(--gold)">🧠 Humanité: ${c.humanity}</span>
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;margin-bottom:6px;font-family:Cinzel,serif">Stats</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            ${['int','ref','dex','tech','cool','will','luck','move','body','emp'].map(stat => `
+              <div style="background:var(--surface2);border-radius:6px;padding:8px;text-align:center">
+                <div style="font-size:10px;color:var(--ink3);text-transform:uppercase">${stat}</div>
+                <div style="font-size:20px;font-weight:700;color:var(--gold)">${c[stat]}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ${c.skills?.length ? `
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;margin-bottom:6px;font-family:Cinzel,serif">Compétences</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${c.skills.map(s => `<span style="background:var(--surface2);padding:3px 8px;border-radius:4px;font-size:12px">${s.name}: ${s.value}</span>`).join('')}
+          </div>
+        </div>` : ''}
+        ${c.cyberware?.length ? `
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;margin-bottom:6px;font-family:Cinzel,serif">Cyberware</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${c.cyberware.map(cw => `<span style="background:var(--surface2);padding:3px 8px;border-radius:4px;font-size:12px;color:var(--accent)">⚡ ${cw.name}</span>`).join('')}
+          </div>
+        </div>` : ''}
+        ${c.weapons?.length ? `
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;margin-bottom:6px;font-family:Cinzel,serif">Armes</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            ${c.weapons.map(w => `<div style="background:var(--surface2);padding:6px 10px;border-radius:4px;font-size:12px;display:flex;justify-content:space-between"><span>🔫 ${w.name}</span><span style="color:var(--ink3)">${w.damage||''}</span></div>`).join('')}
+          </div>
+        </div>` : ''}
+        ${c.notes ? `<div style="padding:10px;background:var(--surface2);border-radius:6px;font-size:13px;white-space:pre-wrap">${c.notes}</div>` : ''}
+      </div>
+    `).join('');
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--error)">Erreur de chargement</div>';
   }
 }
 
@@ -1768,7 +1832,7 @@ async function deleteToken(id) {
 // ═══════════════════════════════════════════════════════
 // MODALS
 // ═══════════════════════════════════════════════════════
-const SYSTEMS = ['D&D 5e', 'Pathfinder', 'Call of Cthulhu', 'Starfinder', 'Shadowrun', 'Warhammer', 'Autre'];
+const SYSTEMS = ['D&D 5e', 'Pathfinder', 'Savage Worlds', 'Cyberpunk Red', 'Call of Cthulhu', 'Starfinder', 'Shadowrun', 'Warhammer', 'Autre'];
 const COLORS = ['#1e1b4b','#1e3a2e','#3a1a1a','#1a2a3a','#2a1a3a','#3a2a0a','#1a1a1a'];
 
 function showModal(html) {

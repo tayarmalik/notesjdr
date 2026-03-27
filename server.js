@@ -84,6 +84,7 @@ app.use('/api/messages', require('./src/routes/messages'));
 app.use('/api/admin', require('./src/routes/admin'));
 app.use('/api/vtt', require('./src/routes/vtt'));
 app.use('/api/sw', require('./src/routes/sw'));
+app.use('/api/cpr', require('./src/routes/cpr'));
 app.use('/maps', require('express').static(require('path').join(__dirname, 'maps')));
 
 // Page publique de partage
