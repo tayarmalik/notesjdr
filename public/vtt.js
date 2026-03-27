@@ -994,9 +994,19 @@ async function swRenderCharTab() {
     } catch(e) {}
   }
 
+  const isCPR = vttState.room?.system === 'cyberpunk_red';
+  const isSW = vttState.room?.system === 'savage_worlds';
+  const systemLabel = isCPR ? 'Cyberpunk Red' : isSW ? 'Savage Worlds' : 'Personnages';
+
+  if (isCPR) {
+    el.innerHTML = '<div style="padding:12px"><div style="font-family:Cinzel,serif;color:var(--gold);font-size:13px;margin-bottom:8px">Fiches ' + systemLabel + '</div><div id="cpr-chars-list"><div style="color:var(--ink3)">Chargement...</div></div></div>';
+    cprLoadVTTChars();
+    return;
+  }
+
   el.innerHTML =
     '<div style="padding:12px">' +
-      '<div style="font-family:Cinzel,serif;color:var(--gold);font-size:13px;margin-bottom:8px">Fiches ' + (vttState.room?.system === 'savage_worlds' ? 'Savage Worlds' : 'Personnages') + '</div>' +
+      '<div style="font-family:Cinzel,serif;color:var(--gold);font-size:13px;margin-bottom:8px">Fiches ' + systemLabel + '</div>' +
       '<div style="display:flex;gap:4px;margin-bottom:4px">' +
         '<input class="input-sm" id="sw-new-name" placeholder="Nom du perso" style="flex:1">' +
         '<button class="btn btn-sm" style="background:var(--gold);color:var(--bg)" onclick="swCreateChar()">+</button>' +
@@ -1006,6 +1016,89 @@ async function swRenderCharTab() {
     '</div>' +
     '<div id="sw-sheet-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:2000;align-items:center;justify-content:center;overflow-y:auto"></div>';
   swLoadCharacters();
+}
+
+// ═══════════════════════════════════════
+// FICHES CPR DANS LA VTT
+// ═══════════════════════════════════════
+
+async function cprLoadVTTChars() {
+  const el = document.getElementById('cpr-chars-list');
+  if (!el) return;
+  const chars = await api('GET', '/cpr/characters');
+  const campaignId = vttState.room?.campaign_id;
+  const mine = campaignId ? chars.filter(c => c.campaign_id == campaignId) : chars;
+  if (!mine.length) {
+    el.innerHTML = '<div style="color:var(--ink3);font-size:13px">Aucune fiche CPR pour cette campagne.</div>';
+    return;
+  }
+  el.innerHTML = mine.map(c => {
+    const stats = ['int','ref','dex','tech','cool','will','luck','move','body','emp'];
+    const statsHtml = stats.map(s =>
+      '<div style="text-align:center;background:var(--bg);border-radius:4px;padding:6px;cursor:pointer" onclick="cprRollStat('' + s.toUpperCase() + '',' + (c[s]||5) + ')" title="Lancer ' + s.toUpperCase() + '">' +
+        '<div style="font-size:9px;color:var(--ink3)">' + s.toUpperCase() + '</div>' +
+        '<div style="font-size:16px;font-weight:700;color:var(--gold)">' + (c[s]||5) + '</div>' +
+        '<div style="font-size:9px;color:var(--ink3)">🎲</div>' +
+      '</div>'
+    ).join('');
+    const skillsHtml = c.skills?.length ? c.skills.map(sk =>
+      '<button class="btn btn-sm btn-ghost" style="font-size:11px" onclick="cprRollSkill('' + sk.name + '',' + (sk.value||0) + ',' + (c[sk.stat]||5) + ')" title="Lancer ' + sk.name + '">' +
+        '🎲 ' + sk.name + ' (' + (sk.value||0) + ')' +
+      '</button>'
+    ).join('') : '<div style="color:var(--ink3);font-size:11px">Aucune compétence</div>';
+    return '<div style="background:var(--bg);border-radius:6px;padding:10px;margin-bottom:8px">' +
+      '<div style="font-weight:600;color:var(--gold);margin-bottom:6px">' + c.name + ' <span style="font-size:11px;color:var(--ink3)">(' + c.role + ')</span>' +
+        ' <span style="font-size:11px;color:var(--error)">❤️ ' + (c.hp||40) + '/' + (c.hp_max||40) + '</span>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:8px">' + statsHtml + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:4px">' + skillsHtml + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// JETS DE DÉS PAR SYSTÈME
+// ═══════════════════════════════════════
+
+function swRollStat(key, label) {
+  const sel = document.getElementById('sw-' + key);
+  const sides = sel ? parseInt(sel.value) : (swCurrentChar?.[key] || 6);
+  // Savage Worlds : dé de la stat + Wild Die d6, on garde le meilleur
+  const roll1 = Math.floor(Math.random() * sides) + 1;
+  const wild = Math.floor(Math.random() * 6) + 1;
+  const result = Math.max(roll1, wild);
+  const raises = Math.max(0, Math.floor((result - 4) / 4));
+  const msg = `🎲 ${label} (d${sides}+Wild d6): **${result}**` + (raises > 0 ? ` — ${raises} Relance(s)!` : '');
+  vttShowRollResult(msg);
+  vttBroadcast({ type: 'dice_roll', label, result, detail: `d${sides}:${roll1} | Wd6:${wild}`, username: state.user?.username });
+}
+
+function cprRollStat(statName, statVal) {
+  // Cyberpunk Red : 1d10 + valeur stat
+  const d10 = Math.floor(Math.random() * 10) + 1;
+  const total = d10 + statVal;
+  const critical = d10 === 10 ? ' 🔥 CRITIQUE!' : (d10 === 1 ? ' 💀 FUMBLE!' : '');
+  const msg = `🎲 ${statName} (1d10+${statVal}): **${total}** (d10:${d10}+stat:${statVal})${critical}`;
+  vttShowRollResult(msg);
+  vttBroadcast({ type: 'dice_roll', label: statName, result: total, detail: `d10:${d10}+${statVal}`, username: state.user?.username });
+}
+
+function cprRollSkill(skillName, skillVal, statVal) {
+  // Cyberpunk Red : 1d10 + compétence + stat
+  const d10 = Math.floor(Math.random() * 10) + 1;
+  const total = d10 + skillVal + statVal;
+  const critical = d10 === 10 ? ' 🔥 CRITIQUE!' : (d10 === 1 ? ' 💀 FUMBLE!' : '');
+  const msg = `🎲 ${skillName} (1d10+${skillVal}+${statVal}): **${total}**${critical}`;
+  vttShowRollResult(msg);
+  vttBroadcast({ type: 'dice_roll', label: skillName, result: total, username: state.user?.username });
+}
+
+function vttShowRollResult(msg) {
+  const el = document.getElementById('dice-result');
+  if (el) {
+    el.innerHTML = msg.replace(/\*\*(.*?)\*\*/g, '<span style="font-size:28px;color:var(--gold)">$1</span>');
+    swSwitchTab('dice');
+  }
 }
 
 function swSwitchTab(tab) {
@@ -1099,6 +1192,7 @@ function swRenderSheet(char) {
             '<select class="input-sm" id="sw-' + key + '" style="width:100%">' +
               [4,6,8,10,12].map(d => '<option value="' + d + '"' + (char[key]===d?' selected':'') + '>d' + d + '</option>').join('') +
             '</select>' +
+            '<button class="btn btn-sm btn-ghost" style="width:100%;margin-top:4px;font-size:11px" onclick="swRollStat(\'' + key + '\',\'' + label + '\')" title="Lancer ' + label + '">🎲 Lancer</button>' +
           '</div>'
         ).join('') +
       '</div>' +
