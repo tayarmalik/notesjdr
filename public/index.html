@@ -1383,6 +1383,7 @@ function switchCampaignTab(tab) {
   const content = document.getElementById('campaign-tab-content');
   content.style.padding = '';
   document.getElementById('page-container').classList.remove('vtt-mode');
+  document.querySelector('.page-content').style.maxWidth = '';
   switch(tab) {
     case 'sessions': content.innerHTML = renderSessionsTab(c); break;
     case 'characters': content.innerHTML = renderCharactersTab(c); break;
@@ -1398,7 +1399,7 @@ function switchCampaignTab(tab) {
     case 'timeline': content.innerHTML = renderTimelineTab(c); setTimeout(() => loadTimeline(c.id, c.sessions||[]), 0); break;
     case 'quests': content.innerHTML = renderQuestsTab(c); setTimeout(() => loadQuests(c.id), 0); break;
     case 'sw': content.innerHTML = '<div id="sw-tab-content"><div style="color:var(--ink3)">Chargement...</div></div>'; setTimeout(() => loadSWTab(c.id), 0); break;
-    case 'vtt': content.innerHTML = '<div id="vtt-campaign-container"></div>'; document.getElementById('campaign-tab-content').style.padding='0'; setTimeout(() => renderVTT(document.getElementById('vtt-campaign-container'), '', []), 0); break;
+    case 'vtt': content.innerHTML = '<div id="vtt-campaign-container"></div>'; document.getElementById('campaign-tab-content').style.padding='0'; document.querySelector('.page-content').style.maxWidth='100%'; setTimeout(() => renderVTT(document.getElementById('vtt-campaign-container'), '', []), 0); break;
     case 'cpr': content.innerHTML = '<div id="cpr-tab-content"><div style="color:var(--ink3)">Chargement...</div></div>'; setTimeout(() => loadCPRTab(c.id), 0); break;
   }
 }

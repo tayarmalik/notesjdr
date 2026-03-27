@@ -12,6 +12,7 @@ let vttState = {
 
 async function renderVTT(container, title, actions) {
   const inCampaignTab = container.id === 'vtt-campaign-container';
+  if (!inCampaignTab) {
     if (title) title.textContent = "Table Virtuelle";
     document.getElementById("page-container").classList.add("vtt-mode");
   } else {
