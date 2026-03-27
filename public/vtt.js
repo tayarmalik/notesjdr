@@ -37,6 +37,7 @@ async function renderVTT(container, title, actions) {
           "<option value=\"\">(Aucun systeme)</option>",
           "<option value=\"savage_worlds\">Savage Worlds</option>",
           "<option value=\"dnd5e\">D&D 5e</option>",
+          "<option value=\"cyberpunk_red\">Cyberpunk Red</option>",
         "</select>",
       "</div>",
       "<div style=\"padding:12px;border-bottom:1px solid var(--border);flex:1;overflow-y:auto\">",
@@ -58,6 +59,7 @@ async function renderVTT(container, title, actions) {
           "<option value=\"\">(Aucun)</option>",
           "<option value=\"savage_worlds\">Savage Worlds</option>",
           "<option value=\"dnd5e\">D&D 5e</option>",
+          "<option value=\"cyberpunk_red\">Cyberpunk Red</option>",
         "</select>",
         "<div style=\"font-family:Cinzel,serif;color:var(--gold);font-size:13px;margin-bottom:6px\">Carte</div>",
         "<input type=\"file\" id=\"map-upload\" accept=\"image/*\" style=\"display:none\" onchange=\"vttUploadMap(this)\">",
@@ -394,7 +396,7 @@ async function vttJoinRoom(id, name) {
 function vttShowRoomSystem(room) {
   const el = document.getElementById('vtt-rooms-list');
   if (!el) return;
-  const systemNames = { savage_worlds: 'Savage Worlds', dnd5e: 'D&D 5e', '': 'Aucun système' };
+  const systemNames = { savage_worlds: 'Savage Worlds', dnd5e: 'D&D 5e', cyberpunk_red: 'Cyberpunk Red', '': 'Aucun système' };
   // Mettre à jour le select si la salle active a un système
   if (room && room.system !== undefined) {
     const sel = document.getElementById('room-system-sel');
