@@ -87,6 +87,11 @@ app.use('/api/sw', require('./src/routes/sw'));
 app.use('/api/cpr', require('./src/routes/cpr'));
 app.use('/maps', require('express').static(require('path').join(__dirname, 'maps')));
 
+// VTT standalone
+app.get('/vtt-standalone', (req, res) => {
+  res.sendFile(require('path').join(__dirname, 'public', 'index.html'));
+});
+
 // Page publique de partage
 app.get('/share/:token', (req, res) => {
   res.send(`<!DOCTYPE html>

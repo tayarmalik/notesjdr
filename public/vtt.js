@@ -15,9 +15,6 @@ async function renderVTT(container, title, actions) {
   if (!inCampaignTab) {
     if (title) title.textContent = "Table Virtuelle";
     document.getElementById("page-container").classList.add("vtt-mode");
-  } else {
-    container.style.height = 'calc(100vh - 140px)';
-    container.style.overflow = 'hidden';
   }
   const rooms = await api("GET", "/vtt/rooms");
 
@@ -29,7 +26,7 @@ async function renderVTT(container, title, actions) {
   ).join("");
 
   const html = [
-    "<div style=\"display:flex;height:calc(100vh - 70px);gap:0;overflow:hidden\">",
+    "<div style=\"display:flex;height:calc(100vh - " + (inCampaignTab ? "180px" : "70px") + ");gap:0;overflow:hidden\">",
     // Sidebar gauche
     "<div style=\"width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0\">",
       "<div style=\"padding:12px;border-bottom:1px solid var(--border)\">",

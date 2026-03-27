@@ -1082,7 +1082,11 @@ async function showApp() {
   await loadCampaigns();
   checkAiStatus();
   setInterval(checkAiStatus, 30000);
-  showPage('dashboard');
+  if (window.location.pathname === '/vtt-standalone') {
+    setTimeout(() => showPage('vtt'), 100);
+  } else {
+    showPage('dashboard');
+  }
 }
 
 function updateUserUI() {
@@ -1399,7 +1403,7 @@ function switchCampaignTab(tab) {
     case 'timeline': content.innerHTML = renderTimelineTab(c); setTimeout(() => loadTimeline(c.id, c.sessions||[]), 0); break;
     case 'quests': content.innerHTML = renderQuestsTab(c); setTimeout(() => loadQuests(c.id), 0); break;
     case 'sw': content.innerHTML = '<div id="sw-tab-content"><div style="color:var(--ink3)">Chargement...</div></div>'; setTimeout(() => loadSWTab(c.id), 0); break;
-    case 'vtt': content.innerHTML = '<div id="vtt-campaign-container"></div>'; document.getElementById('campaign-tab-content').style.padding='0'; document.querySelector('.page-content').style.maxWidth='100%'; setTimeout(() => renderVTT(document.getElementById('vtt-campaign-container'), '', []), 0); break;
+    case 'vtt': window.open('/vtt-standalone?campaign=' + c.id, '_blank'); document.getElementById('tab-sessions').click(); break;
     case 'cpr': content.innerHTML = '<div id="cpr-tab-content"><div style="color:var(--ink3)">Chargement...</div></div>'; setTimeout(() => loadCPRTab(c.id), 0); break;
   }
 }
