@@ -410,6 +410,8 @@ async function vttSetRoomSystem(system) {
   vttState.room.system = system;
   const charsBtn = document.getElementById('tab-chars-btn');
   if (charsBtn) charsBtn.style.display = system ? '' : 'none';
+  const swBtn = document.getElementById('tab-sw-btn');
+  if (swBtn) swBtn.style.display = (system === 'savage_worlds') ? '' : 'none';
   toast('Système mis à jour : ' + (system || 'aucun'), 'success');
 }
 
