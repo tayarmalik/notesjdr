@@ -891,6 +891,7 @@
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
 <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script src="/vtt.js"></script>
 <style>
 .EasyMDEContainer .CodeMirror { background: var(--bg); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; font-family: 'Crimson Pro', serif; font-size: 15px; }
 .EasyMDEContainer .editor-toolbar { background: var(--surface); border: 1px solid var(--border); border-radius: 6px 6px 0 0; }
@@ -1380,6 +1381,7 @@ function switchCampaignTab(tab) {
   document.getElementById('tab-' + tab).classList.add('active');
   const c = state.currentCampaign;
   const content = document.getElementById('campaign-tab-content');
+  content.style.padding = '';
   switch(tab) {
     case 'sessions': content.innerHTML = renderSessionsTab(c); break;
     case 'characters': content.innerHTML = renderCharactersTab(c); break;
@@ -3645,6 +3647,6 @@ function toggleAdvanced(id) {
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 </script>
-<script src="/vtt.js"></script>
+
 </body>
 </html>
