@@ -10,7 +10,7 @@ router.get('/characters', requireAuth, (req, res) => {
   const chars = user?.is_admin
     ? db.prepare('SELECT cpr.*, u.username as assigned_username FROM cpr_characters cpr LEFT JOIN users u ON u.id = cpr.assigned_user_id ORDER BY cpr.updated_at DESC').all()
     : db.prepare('SELECT cpr.*, u.username as assigned_username FROM cpr_characters cpr LEFT JOIN users u ON u.id = cpr.assigned_user_id WHERE cpr.assigned_user_id = ? OR cpr.user_id = ? ORDER BY cpr.updated_at DESC').all(req.session.userId, req.session.userId);
-  res.json(chars.map(c => ({ ...c, skills: JSON.parse(c.skills||'[]'), cyberware: JSON.parse(c.cyberware||'[]'), weapons: JSON.parse(c.weapons||'[]'), gear: JSON.parse(c.gear||'[]') })));
+  res.json(chars.map(c => ({ ...c, skills: JSON.parse(c.skills||'[]'), cyberware: JSON.parse(c.cyberware||'[]'), weapons: JSON.parse(c.weapons||'[]'), gear: JSON.parse(c.gear||'[]'), background: c.background||'' })));
 });
 
 // POST /api/cpr/characters
@@ -47,14 +47,14 @@ router.put('/characters/:id', requireAuth, (req, res) => {
       luck=COALESCE(?,luck), move=COALESCE(?,move), body=COALESCE(?,body), emp=COALESCE(?,emp),
       hp=COALESCE(?,hp), hp_max=COALESCE(?,hp_max), humanity=COALESCE(?,humanity),
       skills=COALESCE(?,skills), cyberware=COALESCE(?,cyberware),
-      weapons=COALESCE(?,weapons), gear=COALESCE(?,gear), notes=COALESCE(?,notes),
+      weapons=COALESCE(?,weapons), gear=COALESCE(?,gear), background=COALESCE(?,background), notes=COALESCE(?,notes),
       updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(
       s(b.name), s(b.role),
       n(b.int,5), n(b.ref,5), n(b.dex,5),
       n(b.tech,5), n(b.cool,5), n(b.will,5),
       n(b.luck,5), n(b.move,5), n(b.body,5), n(b.emp,5),
       n(b.hp,40), n(b.hp_max,40), n(b.humanity,50),
-      j(b.skills), j(b.cyberware), j(b.weapons), j(b.gear), s(b.notes),
+      j(b.skills), j(b.cyberware), j(b.weapons), j(b.gear), s(b.background), s(b.notes),
       req.params.id
     );
     res.json({ success: true });

@@ -1443,6 +1443,7 @@ async function cprEditChar(id, campaignId) {
         <input id="edit-cpr-hp_max" type="number" class="input-sm" value="${c.hp_max}" placeholder="PV max" style="width:80px">
         <input id="edit-cpr-humanity" type="number" class="input-sm" value="${c.humanity}" placeholder="Humanité" style="width:100px">
       </div>
+      <textarea id="edit-cpr-background" class="input-sm" placeholder="Background" style="width:100%;min-height:60px;margin-bottom:8px">${c.background||''}</textarea>
       <textarea id="edit-cpr-notes" class="input-sm" placeholder="Notes" style="width:100%;min-height:80px">${c.notes||''}</textarea>
       <div style="display:flex;gap:8px;margin-top:16px">
         <button class="btn btn-primary" onclick="cprSaveEdit(${id}, ${campaignId})">Sauvegarder</button>
@@ -1458,7 +1459,7 @@ async function cprSaveEdit(id, campaignId) {
     name: get('name'), role: get('role'),
     int: get('int'), ref: get('ref'), dex: get('dex'), tech: get('tech'), cool: get('cool'),
     will: get('will'), luck: get('luck'), move: get('move'), body: get('body'), emp: get('emp'),
-    hp: get('hp'), hp_max: get('hp_max'), humanity: get('humanity'), notes: get('notes')
+    hp: get('hp'), hp_max: get('hp_max'), humanity: get('humanity'), background: get('background'), notes: get('notes')
   });
   document.querySelector('[style*="position:fixed"]')?.remove();
   toast('Fiche sauvegardée', 'success');
@@ -1476,7 +1477,8 @@ async function cprCreateChar(campaignId) {
     int: get('cpr-int'), ref: get('cpr-ref'), dex: get('cpr-dex'),
     tech: get('cpr-tech'), cool: get('cpr-cool'), will: get('cpr-will'),
     luck: get('cpr-luck'), move: get('cpr-move'), body: get('cpr-body'), emp: get('cpr-emp'),
-    hp: get('cpr-hp'), hp_max: get('cpr-hp'), humanity: get('cpr-humanity')
+    hp: get('cpr-hp'), hp_max: get('cpr-hp'), humanity: get('cpr-humanity'),
+    background: document.getElementById('cpr-background')?.value || ''
   });
   toast('Fiche créée !', 'success');
   loadCPRTab(campaignId);
@@ -1512,6 +1514,7 @@ async function loadCPRTab(campaignId) {
             ${memberOptions}
           </select>
         </div>
+        <textarea id="cpr-background" class="input-sm" placeholder="Background du personnage" style="width:100%;min-height:60px;margin-bottom:8px"></textarea>
         <button class="btn btn-primary" onclick="cprCreateChar(${campaignId})">Créer la fiche</button>
       </div>`;
     }
@@ -1567,6 +1570,18 @@ async function loadCPRTab(campaignId) {
           <div style="display:flex;flex-direction:column;gap:4px">
             ${c.weapons.map(w => `<div style="background:var(--surface2);padding:6px 10px;border-radius:4px;font-size:12px;display:flex;justify-content:space-between"><span>🔫 ${w.name}</span><span style="color:var(--ink3)">${w.damage||''}</span></div>`).join('')}
           </div>
+        </div>` : ''}
+        ${c.gear?.length ? `
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;margin-bottom:6px;font-family:Cinzel,serif">Équipement</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${c.gear.map(g => `<span style="background:var(--surface2);padding:3px 8px;border-radius:4px;font-size:12px">🎒 ${g.name||g}</span>`).join('')}
+          </div>
+        </div>` : ''}
+        ${c.background ? `
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;margin-bottom:6px;font-family:Cinzel,serif">Background</div>
+          <div style="padding:10px;background:var(--surface2);border-radius:6px;font-size:13px;white-space:pre-wrap">${c.background}</div>
         </div>` : ''}
         ${c.notes ? `<div style="padding:10px;background:var(--surface2);border-radius:6px;font-size:13px;white-space:pre-wrap">${c.notes}</div>` : ''}
       </div>
