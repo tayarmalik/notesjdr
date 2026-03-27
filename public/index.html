@@ -1428,8 +1428,8 @@ async function loadCPRTab(campaignId) {
     // Bouton création MJ
     let mjHtml = '';
     if (isMJ) {
-      const members = await api('GET', `/campaigns/${campaignId}/members`).catch(() => []);
-      const memberOptions = members.map(m => `<option value="${m.user_id}">${m.username}</option>`).join('');
+      const members = await api('GET', `/invitations/campaign/${campaignId}/members`).catch(() => []);
+      const memberOptions = members.map(m => `<option value="${m.id}">${m.username}</option>`).join('');
       mjHtml = `<div class="card" style="margin-bottom:16px;padding:16px;max-width:800px;margin-left:auto;margin-right:auto">
         <div style="font-family:Cinzel,serif;color:var(--gold);margin-bottom:12px">➕ Créer une fiche CPR</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
@@ -1502,7 +1502,7 @@ async function loadCPRTab(campaignId) {
       </div>
     `).join('');
   } catch(e) {
-    container.innerHTML = '<div style="color:var(--error)">Erreur de chargement</div>';
+    container.innerHTML = '<div style="color:var(--error)">Erreur: ' + e.message + '</div>';
   }
 }
 
@@ -1540,7 +1540,7 @@ async function loadSWTab(campaignId) {
       </div>
     `).join('');
   } catch(e) {
-    container.innerHTML = '<div style="color:var(--error)">Erreur de chargement</div>';
+    container.innerHTML = '<div style="color:var(--error)">Erreur: ' + e.message + '</div>';
   }
 }
 

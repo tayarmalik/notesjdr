@@ -169,6 +169,7 @@ async function initDb() {
 
   // Migrations
   const migrations = [
+    "CREATE TABLE IF NOT EXISTS cpr_characters (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, assigned_user_id INTEGER, campaign_id INTEGER, name TEXT NOT NULL, role TEXT DEFAULT 'Solo', int INTEGER DEFAULT 5, ref INTEGER DEFAULT 5, dex INTEGER DEFAULT 5, tech INTEGER DEFAULT 5, cool INTEGER DEFAULT 5, will INTEGER DEFAULT 5, luck INTEGER DEFAULT 5, move INTEGER DEFAULT 5, body INTEGER DEFAULT 5, emp INTEGER DEFAULT 5, hp INTEGER DEFAULT 40, hp_max INTEGER DEFAULT 40, humanity INTEGER DEFAULT 50, skills TEXT DEFAULT '[]', cyberware TEXT DEFAULT '[]', weapons TEXT DEFAULT '[]', gear TEXT DEFAULT '[]', notes TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)",
     "ALTER TABLE cpr_characters ADD COLUMN role TEXT DEFAULT 'Solo'",
     "ALTER TABLE vtt_rooms ADD COLUMN system TEXT",
     "ALTER TABLE sw_characters ADD COLUMN assigned_user_id INTEGER",
