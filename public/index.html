@@ -1397,17 +1397,61 @@ function switchCampaignTab(tab) {
   }
 }
 
+async function cprCreateChar(campaignId) {
+  const name = document.getElementById('cpr-name')?.value?.trim();
+  if (!name) { toast('Nom requis', 'error'); return; }
+  const get = id => document.getElementById(id)?.value;
+  await api('POST', '/cpr/characters', {
+    name, campaign_id: campaignId,
+    role: get('cpr-role') || 'Solo',
+    assigned_user_id: get('cpr-assigned') || null,
+    int: get('cpr-int'), ref: get('cpr-ref'), dex: get('cpr-dex'),
+    tech: get('cpr-tech'), cool: get('cpr-cool'), will: get('cpr-will'),
+    luck: get('cpr-luck'), move: get('cpr-move'), body: get('cpr-body'), emp: get('cpr-emp'),
+    hp: get('cpr-hp'), hp_max: get('cpr-hp'), humanity: get('cpr-humanity')
+  });
+  toast('Fiche créée !', 'success');
+  loadCPRTab(campaignId);
+}
+
 async function loadCPRTab(campaignId) {
   const container = document.getElementById('cpr-tab-content');
   if (!container) return;
   try {
     const chars = await api('GET', '/cpr/characters');
-    const mine = chars.filter(c => c.campaign_id == campaignId);
-    if (!mine.length) {
-      container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔴</div><h3>Aucune fiche assignée</h3><p>Le MJ ne vous a pas encore assigné de fiche Cyberpunk Red.</p></div>';
+    const campaign = state.currentCampaign;
+    const isMJ = campaign && campaign.user_id === state.user?.id;
+    const mine = isMJ ? chars.filter(c => c.campaign_id == campaignId) : chars.filter(c => c.campaign_id == campaignId && (c.assigned_user_id == state.user?.id || c.user_id == state.user?.id));
+    // Bouton création MJ
+    let mjHtml = '';
+    if (isMJ) {
+      const members = await api('GET', `/campaigns/${campaignId}/members`).catch(() => []);
+      const memberOptions = members.map(m => `<option value="${m.user_id}">${m.username}</option>`).join('');
+      mjHtml = `<div class="card" style="margin-bottom:16px;padding:16px;max-width:800px;margin-left:auto;margin-right:auto">
+        <div style="font-family:Cinzel,serif;color:var(--gold);margin-bottom:12px">➕ Créer une fiche CPR</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input id="cpr-name" class="input-sm" placeholder="Nom du personnage">
+          <input id="cpr-role" class="input-sm" placeholder="Rôle (Solo, Netrunner...)">
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px">
+          ${['int','ref','dex','tech','cool','will','luck','move','body','emp'].map(s => `<input id="cpr-${s}" class="input-sm" placeholder="${s.toUpperCase()}" type="number" min="1" max="10" value="5">`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="cpr-hp" class="input-sm" placeholder="PV" type="number" value="40" style="width:80px">
+          <input id="cpr-humanity" class="input-sm" placeholder="Humanité" type="number" value="50" style="width:100px">
+          <select id="cpr-assigned" class="input-sm" style="flex:1">
+            <option value="">-- Assigner à un joueur --</option>
+            ${memberOptions}
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="cprCreateChar(${campaignId})">Créer la fiche</button>
+      </div>`;
+    }
+    if (!mine.length && !isMJ) {
+      container.innerHTML = mjHtml + '<div class="empty-state"><div class="empty-icon">🔴</div><h3>Aucune fiche assignée</h3><p>Le MJ ne vous a pas encore assigné de fiche Cyberpunk Red.</p></div>';
       return;
     }
-    container.innerHTML = mine.map(c => `
+    container.innerHTML = mjHtml + mine.map(c => `
       <div class="card" style="margin-bottom:16px;padding:20px;max-width:800px;margin-left:auto;margin-right:auto">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
           <div>
