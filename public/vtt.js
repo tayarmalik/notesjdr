@@ -95,7 +95,7 @@ async function renderVTT(container, title, actions) {
       "<div style=\"padding:12px;border-bottom:1px solid var(--border)\">",
         "<div style=\"display:flex;border-bottom:1px solid var(--border);margin-bottom:8px\">",
         "<button class=\"btn btn-sm\" id=\"tab-dice-btn\" style=\"flex:1;border-radius:0;background:var(--gold);color:var(--bg)\" onclick=\"swSwitchTab('dice')\">Des</button>",
-        "<button class=\"btn btn-sm\" id=\"tab-sw-btn\" style=\"flex:1;border-radius:0\" onclick=\"swSwitchTab('sw')\">SW</button>",
+        "<button class=\"btn btn-sm\" id=\"tab-sw-btn\" style=\"flex:1;border-radius:0;display:none\" onclick=\"swSwitchTab('sw')\">SW</button>",
         "<button class=\"btn btn-sm\" id=\"tab-chars-btn\" style=\"flex:1;border-radius:0\" onclick=\"swSwitchTab('chars')\">Fiches</button>",
       "</div>",
       "<div id=\"tab-dice\" style=\"\">",
