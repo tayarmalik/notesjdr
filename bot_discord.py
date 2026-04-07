@@ -15,10 +15,10 @@ from datetime import date
 # ═══════════════════════════════════════════════
 # CONFIGURATION
 # ═══════════════════════════════════════════════
-DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DISCORD_TOKEN     = os.getenv("DISCORD_TOKEN")
 GUILD_ID          = 1389170611116314666
 VAULTLOG_URL      = "http://localhost:16384"
-VAULTLOG_TOKEN    = "volog_29502c9c1f1242ecb7b6747168fa42fd"
+VAULTLOG_TOKEN    = os.getenv("VAULTLOG_TOKEN")
 TRANSCRIBE_SCRIPT = "/opt/jdrnotes/transcribe.py"
 RECORDINGS_DIR    = "/opt/jdrnotes/recordings"
 PYTHON_PATH       = os.path.expanduser("~/.pyenv/versions/3.11.10/bin/python3")
