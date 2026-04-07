@@ -117,3 +117,4 @@ vaultlog/
 │   └── volog.db        # Base SQLite (créée automatiquement)
 └── vaultlog.service    # Systemd
 ```
+# test deploy
